@@ -29,7 +29,7 @@ const firebaseConfig = {
   projectId: "absolute-achievers-journal",
   storageBucket: "absolute-achievers-journal.firebasestorage.app",
   messagingSenderId: "1094601783808",
-  appId: "1:1094601783808:web:b4617b73ba7114796ff6e5",
+  appId: "1:1094601783808:web:b4617b71ba7114796ff6e5",
   measurementId: "G-43EFTWQDJE",
 };
 
@@ -46,23 +46,28 @@ interface JournalEntry {
   createdAt: any; // Firestore Timestamp type, 'any' for simplicity here
 }
 
+// Interface for user settings document
+interface UserSettings {
+  coreHabitDescription?: string; // Optional string property
+}
+
 // Main App Component
 function App() {
   // Explicitly type useState hooks
-  const [db, setDb] = useState<Firestore | null>(null); // Can be Firestore instance or null
+  const [db, setDb] = useState<Firestore | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [auth, setAuth] = useState<Auth | null>(null); // Can be Auth instance or null (used for signOut or other auth actions)
-  const [userId, setUserId] = useState<string | null>(null); // Can be string (UID) or null
+  const [auth, setAuth] = useState<Auth | null>(null); // This is intentionally declared but its direct use in JSX is minimal, hence the disable-next-line
+  const [userId, setUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Journal entry states - using the defined interface
-  const [entries, setEntries] = useState<JournalEntry[]>([]); // Array of JournalEntry objects
+  // Journal entry states - input fields are strings, internal logic converts to number
+  const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [currentDate, setCurrentDate] = useState<string>(
     new Date().toISOString().split("T")[0]
   );
-  const [focusScore, setFocusScore] = useState<string>(""); // Keep as string for input field value
+  const [focusScore, setFocusScore] = useState<string>(""); // Value from input type="number" is always string
   const [topPriority, setTopPriority] = useState<string>("");
-  const [salesActivityCount, setSalesActivityCount] = useState<string>(""); // Keep as string for input field value
+  const [salesActivityCount, setSalesActivityCount] = useState<string>(""); // Value from input type="number" is always string
   const [coreHabitDone, setCoreHabitDone] = useState<boolean>(false);
   const [winOfTheDay, setWinOfTheDay] = useState<string>("");
   const [lessonLearned, setLessonLearned] = useState<string>("");
@@ -81,14 +86,19 @@ function App() {
   const totalChallengeDays: number = 21;
 
   // Calculate days completed for the progress bar
-  const daysCompleted = useMemo(() => {
-    const uniqueDates = new Set<string>(); // Set of strings
-    // Filter entries that have core data, assuming core data means a valid entry
-    entries
-      .filter(
-        (e) => e.date && e.focusScore !== undefined && e.focusScore !== null
-      )
-      .forEach((entry) => uniqueDates.add(entry.date.split("T")[0]));
+  const daysCompleted: number = useMemo(() => {
+    const uniqueDates = new Set<string>();
+    entries.forEach((entry) => {
+      // Ensure entry and its properties are defined before accessing them
+      if (
+        entry &&
+        typeof entry.date === "string" &&
+        typeof entry.focusScore === "number" &&
+        !isNaN(entry.focusScore)
+      ) {
+        uniqueDates.add(entry.date.split("T")[0]); // Add only the date part
+      }
+    });
     return Math.min(uniqueDates.size, totalChallengeDays);
   }, [entries, totalChallengeDays]);
 
@@ -103,7 +113,7 @@ function App() {
         const authentication = getAuth(app);
 
         setDb(firestore);
-        setAuth(authentication); // auth instance is stored here
+        setAuth(authentication);
 
         const unsubscribe = onAuthStateChanged(authentication, async (user) => {
           if (user) {
@@ -140,7 +150,7 @@ function App() {
       const unsubscribe = onSnapshot(
         userDocRef,
         (docSnap) => {
-          const userData = docSnap.data();
+          const userData = docSnap.data() as UserSettings | undefined;
           if (
             docSnap.exists() &&
             userData &&
@@ -176,31 +186,25 @@ function App() {
       const unsubscribe = onSnapshot(
         q,
         (snapshot) => {
-          // Ensure fetchedEntries type matches JournalEntry interface properties
           const fetchedEntries: JournalEntry[] = snapshot.docs.map((doc) => {
             const data = doc.data();
             return {
               id: doc.id,
-              date: typeof data.date === "string" ? data.date : "", // Ensure string
-              focusScore:
-                typeof data.focusScore === "number" ? data.focusScore : 0, // Ensure number
-              topPriority:
-                typeof data.topPriority === "string" ? data.topPriority : "", // Ensure string
-              salesActivityCount:
-                typeof data.salesActivityCount === "number"
-                  ? data.salesActivityCount
-                  : 0, // Ensure number
+              date: data.date ? String(data.date) : "",
+              focusScore: data.focusScore ? Number(data.focusScore) : 0,
+              topPriority: data.topPriority ? String(data.topPriority) : "",
+              salesActivityCount: data.salesActivityCount
+                ? Number(data.salesActivityCount)
+                : 0,
               coreHabitDone:
                 typeof data.coreHabitDone === "boolean"
                   ? data.coreHabitDone
-                  : false, // Ensure boolean
-              winOfTheDay:
-                typeof data.winOfTheDay === "string" ? data.winOfTheDay : "", // Ensure string
-              lessonLearned:
-                typeof data.lessonLearned === "string"
-                  ? data.lessonLearned
-                  : "", // Ensure string
-              createdAt: data.createdAt, // Can be Timestamp or undefined initially
+                  : false,
+              winOfTheDay: data.winOfTheDay ? String(data.winOfTheDay) : "",
+              lessonLearned: data.lessonLearned
+                ? String(data.lessonLearned)
+                : "",
+              createdAt: data.createdAt,
             };
           });
           setEntries(fetchedEntries);
@@ -247,7 +251,9 @@ function App() {
       return;
     }
 
-    // Input validation
+    const parsedFocusScore = parseInt(focusScore);
+    const parsedSalesActivityCount = parseInt(salesActivityCount);
+
     if (
       !currentDate ||
       focusScore === "" ||
@@ -260,17 +266,14 @@ function App() {
       return;
     }
     if (
-      isNaN(parseInt(focusScore)) ||
-      parseInt(focusScore) < 1 ||
-      parseInt(focusScore) > 5
+      isNaN(parsedFocusScore) ||
+      parsedFocusScore < 1 ||
+      parsedFocusScore > 5
     ) {
       setMessage("Focus Score must be a number between 1 and 5.");
       return;
     }
-    if (
-      isNaN(parseInt(salesActivityCount)) ||
-      parseInt(salesActivityCount) < 0
-    ) {
+    if (isNaN(parsedSalesActivityCount) || parsedSalesActivityCount < 0) {
       setMessage("Key Sales Activity Count must be a non-negative number.");
       return;
     }
@@ -286,9 +289,9 @@ function App() {
       const userJournalPath = `/users/${userId}/journalEntries`;
       await addDoc(collection(db, userJournalPath), {
         date: currentDate,
-        focusScore: parseInt(focusScore), // Convert to number before saving
+        focusScore: parsedFocusScore,
         topPriority,
-        salesActivityCount: parseInt(salesActivityCount), // Convert to number before saving
+        salesActivityCount: parsedSalesActivityCount,
         coreHabitDone,
         winOfTheDay,
         lessonLearned,
@@ -298,7 +301,6 @@ function App() {
       setShowRewardAnimation(true);
       setTimeout(() => setShowRewardAnimation(false), 3000);
 
-      // Clear form fields after successful submission
       setFocusScore("");
       setTopPriority("");
       setSalesActivityCount("");
@@ -478,7 +480,7 @@ function App() {
                 id="topPriority"
                 value={topPriority}
                 onChange={(e) => setTopPriority(e.target.value)}
-                rows="2"
+                rows={2} // Changed to number
                 className="w-full p-2.5 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150"
                 placeholder="Finish proposal for client X, Plan tomorrow's calls."
                 required
@@ -529,7 +531,7 @@ function App() {
                 id="win"
                 value={winOfTheDay}
                 onChange={(e) => setWinOfTheDay(e.target.value)}
-                rows="2"
+                rows={2} // Changed to number
                 className="w-full p-2.5 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150"
                 placeholder="Successfully handled a tough objection; Closed a small deal!"
                 required
@@ -546,7 +548,7 @@ function App() {
                 id="lesson"
                 value={lessonLearned}
                 onChange={(e) => setLessonLearned(e.target.value)}
-                rows="2"
+                rows={2} // Changed to number
                 className="w-full p-2.5 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150"
                 placeholder="Focusing on just one priority dramatically improved my efficiency."
                 required
