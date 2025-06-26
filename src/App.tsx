@@ -1,23 +1,7 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { initializeApp } from "firebase/app";
-import {
-  getAuth,
-  signInAnonymously,
-  onAuthStateChanged,
-  Auth,
-} from "firebase/auth";
-import {
-  getFirestore,
-  addDoc,
-  collection,
-  query,
-  orderBy,
-  onSnapshot,
-  serverTimestamp,
-  doc,
-  setDoc,
-  Firestore,
-} from "firebase/firestore";
+import React, { useState, useEffect, useMemo } from 'react';
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInAnonymously, onAuthStateChanged, Auth } from 'firebase/auth';
+import { getFirestore, addDoc, collection, query, orderBy, onSnapshot, serverTimestamp, doc, setDoc, Firestore } from 'firebase/firestore';
 
 // --- Firebase Configuration ---
 // Your UNIQUE Firebase Project Configuration
@@ -29,8 +13,8 @@ const firebaseConfig = {
   projectId: "absolute-achievers-journal",
   storageBucket: "absolute-achievers-journal.firebasestorage.app",
   messagingSenderId: "1094601783808",
-  appId: "1:1094601783808:web:b4617b71ba7114796ff6e5",
-  measurementId: "G-43EFTWQDJE",
+  appId: "1:1094601783808:web:b4617b73ba7114796ff6e5",
+  measurementId: "G-43EFTWQDJE"
 };
 
 // Define TypeScript interfaces for your data structures
@@ -55,48 +39,39 @@ interface UserSettings {
 function App() {
   // Explicitly type useState hooks
   const [db, setDb] = useState<Firestore | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  /* eslint-disable-next-line @typescript-eslint/no-unused-vars */ // More robust linter disable
   const [auth, setAuth] = useState<Auth | null>(null); // This is intentionally declared but its direct use in JSX is minimal, hence the disable-next-line
   const [userId, setUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Journal entry states - input fields are strings, internal logic converts to number
   const [entries, setEntries] = useState<JournalEntry[]>([]);
-  const [currentDate, setCurrentDate] = useState<string>(
-    new Date().toISOString().split("T")[0]
-  );
-  const [focusScore, setFocusScore] = useState<string>(""); // Value from input type="number" is always string
-  const [topPriority, setTopPriority] = useState<string>("");
-  const [salesActivityCount, setSalesActivityCount] = useState<string>(""); // Value from input type="number" is always string
+  const [currentDate, setCurrentDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [focusScore, setFocusScore] = useState<string>(''); // Value from input type="number" is always string
+  const [topPriority, setTopPriority] = useState<string>('');
+  const [salesActivityCount, setSalesActivityCount] = useState<string>(''); // Value from input type="number" is always string
   const [coreHabitDone, setCoreHabitDone] = useState<boolean>(false);
-  const [winOfTheDay, setWinOfTheDay] = useState<string>("");
-  const [lessonLearned, setLessonLearned] = useState<string>("");
+  const [winOfTheDay, setWinOfTheDay] = useState<string>('');
+  const [lessonLearned, setLessonLearned] = useState<string>('');
 
   // UI/Feedback states
-  const [message, setMessage] = useState<string>("");
-  const [showRewardAnimation, setShowRewardAnimation] =
-    useState<boolean>(false);
+  const [message, setMessage] = useState<string>('');
+  const [showRewardAnimation, setShowRewardAnimation] = useState<boolean>(false);
 
   // Core Habit specific states
-  const [challengeCoreHabit, setChallengeCoreHabit] = useState<string>("");
-  const [showHabitSetupModal, setShowHabitSetupModal] =
-    useState<boolean>(false);
-  const [tempCoreHabitInput, setTempCoreHabitInput] = useState<string>("");
+  const [challengeCoreHabit, setChallengeCoreHabit] = useState<string>('');
+  const [showHabitSetupModal, setShowHabitSetupModal] = useState<boolean>(false);
+  const [tempCoreHabitInput, setTempCoreHabitInput] = useState<string>('');
 
   const totalChallengeDays: number = 21;
 
   // Calculate days completed for the progress bar
   const daysCompleted: number = useMemo(() => {
     const uniqueDates = new Set<string>();
-    entries.forEach((entry) => {
+    entries.forEach(entry => {
       // Ensure entry and its properties are defined before accessing them
-      if (
-        entry &&
-        typeof entry.date === "string" &&
-        typeof entry.focusScore === "number" &&
-        !isNaN(entry.focusScore)
-      ) {
-        uniqueDates.add(entry.date.split("T")[0]); // Add only the date part
+      if (entry && typeof entry.date === 'string' && typeof entry.focusScore === 'number' && !isNaN(entry.focusScore)) {
+        uniqueDates.add(entry.date.split('T')[0]); // Add only the date part
       }
     });
     return Math.min(uniqueDates.size, totalChallengeDays);
@@ -118,14 +93,14 @@ function App() {
         const unsubscribe = onAuthStateChanged(authentication, async (user) => {
           if (user) {
             setUserId(user.uid);
-            console.log("User signed in:", user.uid);
+            console.log('User signed in:', user.uid);
           } else {
             try {
               await signInAnonymously(authentication);
-              console.log("Signed in anonymously.");
+              console.log('Signed in anonymously.');
             } catch (error: any) {
-              console.error("Error during anonymous sign-in:", error);
-              setMessage("Error signing in. Please try again.");
+              console.error('Error during anonymous sign-in:', error);
+              setMessage('Error signing in. Please try again.');
             }
           }
           setIsLoading(false);
@@ -133,10 +108,8 @@ function App() {
 
         return () => unsubscribe();
       } catch (error: any) {
-        console.error("Error initializing Firebase:", error);
-        setMessage(
-          "Failed to initialize application. Please check console for details."
-        );
+        console.error('Error initializing Firebase:', error);
+        setMessage('Failed to initialize application. Please check console for details.');
         setIsLoading(false);
       }
     }
@@ -146,33 +119,20 @@ function App() {
   // --- Fetch User-Specific Settings (like Core Habit) ---
   useEffect(() => {
     if (db && userId) {
-      const userDocRef = doc(db, "users", userId);
-      const unsubscribe = onSnapshot(
-        userDocRef,
-        (docSnap) => {
-          const userData = docSnap.data() as UserSettings | undefined;
-          if (
-            docSnap.exists() &&
-            userData &&
-            typeof userData.coreHabitDescription === "string"
-          ) {
-            setChallengeCoreHabit(userData.coreHabitDescription);
-          } else {
-            setChallengeCoreHabit("");
-            if (
-              !isLoading &&
-              (!userData ||
-                typeof userData.coreHabitDescription !== "string") &&
-              !showHabitSetupModal
-            ) {
-              setShowHabitSetupModal(true);
-            }
+      const userDocRef = doc(db, 'users', userId);
+      const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
+        const userData = docSnap.data() as UserSettings | undefined;
+        if (docSnap.exists() && userData && typeof userData.coreHabitDescription === 'string') {
+          setChallengeCoreHabit(userData.coreHabitDescription);
+        } else {
+          setChallengeCoreHabit('');
+          if (!isLoading && (!userData || typeof userData.coreHabitDescription !== 'string') && !showHabitSetupModal) {
+             setShowHabitSetupModal(true);
           }
-        },
-        (error: any) => {
-          console.error("Error fetching user settings:", error);
         }
-      );
+      }, (error: any) => {
+        console.error("Error fetching user settings:", error);
+      });
       return () => unsubscribe();
     }
   }, [db, userId, isLoading, showHabitSetupModal]);
@@ -181,40 +141,29 @@ function App() {
   useEffect(() => {
     if (db && userId) {
       const userJournalPath = `/users/${userId}/journalEntries`;
-      const q = query(collection(db, userJournalPath), orderBy("date", "desc"));
+      const q = query(collection(db, userJournalPath), orderBy('date', 'desc'));
 
-      const unsubscribe = onSnapshot(
-        q,
-        (snapshot) => {
-          const fetchedEntries: JournalEntry[] = snapshot.docs.map((doc) => {
-            const data = doc.data();
-            return {
-              id: doc.id,
-              date: data.date ? String(data.date) : "",
-              focusScore: data.focusScore ? Number(data.focusScore) : 0,
-              topPriority: data.topPriority ? String(data.topPriority) : "",
-              salesActivityCount: data.salesActivityCount
-                ? Number(data.salesActivityCount)
-                : 0,
-              coreHabitDone:
-                typeof data.coreHabitDone === "boolean"
-                  ? data.coreHabitDone
-                  : false,
-              winOfTheDay: data.winOfTheDay ? String(data.winOfTheDay) : "",
-              lessonLearned: data.lessonLearned
-                ? String(data.lessonLearned)
-                : "",
-              createdAt: data.createdAt,
-            };
-          });
-          setEntries(fetchedEntries);
-          console.log("Fetched entries:", fetchedEntries);
-        },
-        (error: any) => {
-          console.error("Error fetching entries:", error);
-          setMessage("Failed to load journal entries. Please try again.");
-        }
-      );
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const fetchedEntries: JournalEntry[] = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            date: data.date ? String(data.date) : '',
+            focusScore: data.focusScore ? Number(data.focusScore) : 0,
+            topPriority: data.topPriority ? String(data.topPriority) : '',
+            salesActivityCount: data.salesActivityCount ? Number(data.salesActivityCount) : 0,
+            coreHabitDone: typeof data.coreHabitDone === 'boolean' ? data.coreHabitDone : false,
+            winOfTheDay: data.winOfTheDay ? String(data.winOfTheDay) : '',
+            lessonLearned: data.lessonLearned ? String(data.lessonLearned) : '',
+            createdAt: data.createdAt
+          };
+        });
+        setEntries(fetchedEntries);
+        console.log('Fetched entries:', fetchedEntries);
+      }, (error: any) => {
+        console.error('Error fetching entries:', error);
+        setMessage('Failed to load journal entries. Please try again.');
+      });
       return () => unsubscribe();
     }
   }, [db, userId]);
@@ -222,67 +171,51 @@ function App() {
   // --- Handle Setting/Updating Core Habit ---
   const handleSetCoreHabit = async () => {
     if (!db || !userId || !tempCoreHabitInput.trim()) {
-      setMessage("Please enter a habit description.");
+      setMessage('Please enter a habit description.');
       return;
     }
     try {
-      const userDocRef = doc(db, "users", userId);
-      await setDoc(
-        userDocRef,
-        { coreHabitDescription: tempCoreHabitInput.trim() },
-        { merge: true }
-      );
+      const userDocRef = doc(db, 'users', userId);
+      await setDoc(userDocRef, { coreHabitDescription: tempCoreHabitInput.trim() }, { merge: true });
       setChallengeCoreHabit(tempCoreHabitInput.trim());
       setShowHabitSetupModal(false);
-      setMessage("Your Core Habit has been set!");
+      setMessage('Your Core Habit has been set!');
     } catch (error: any) {
-      console.error("Error setting core habit:", error);
-      setMessage("Error setting habit. Please try again.");
+      console.error('Error setting core habit:', error);
+      setMessage('Error setting habit. Please try again.');
     }
   };
+
 
   // --- Handle Journal Entry Submission ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setMessage("");
+    setMessage('');
 
     if (!db || !userId) {
-      setMessage("Error: Application not ready. Please wait or refresh.");
+      setMessage('Error: Application not ready. Please wait or refresh.');
       return;
     }
 
     const parsedFocusScore = parseInt(focusScore);
     const parsedSalesActivityCount = parseInt(salesActivityCount);
 
-    if (
-      !currentDate ||
-      focusScore === "" ||
-      !topPriority ||
-      salesActivityCount === "" ||
-      !winOfTheDay ||
-      !lessonLearned
-    ) {
-      setMessage("Please fill in all required fields.");
+    if (!currentDate || focusScore === '' || !topPriority || salesActivityCount === '' || !winOfTheDay || !lessonLearned) {
+      setMessage('Please fill in all required fields.');
       return;
     }
-    if (
-      isNaN(parsedFocusScore) ||
-      parsedFocusScore < 1 ||
-      parsedFocusScore > 5
-    ) {
-      setMessage("Focus Score must be a number between 1 and 5.");
+    if (isNaN(parsedFocusScore) || parsedFocusScore < 1 || parsedFocusScore > 5) {
+      setMessage('Focus Score must be a number between 1 and 5.');
       return;
     }
     if (isNaN(parsedSalesActivityCount) || parsedSalesActivityCount < 0) {
-      setMessage("Key Sales Activity Count must be a non-negative number.");
+      setMessage('Key Sales Activity Count must be a non-negative number.');
       return;
     }
     if (!challengeCoreHabit) {
-      setMessage(
-        "Please define your Core Habit before submitting a daily entry!"
-      );
-      setShowHabitSetupModal(true);
-      return;
+        setMessage('Please define your Core Habit before submitting a daily entry!');
+        setShowHabitSetupModal(true);
+        return;
     }
 
     try {
@@ -297,29 +230,27 @@ function App() {
         lessonLearned,
         createdAt: serverTimestamp(),
       });
-      setMessage("Journal entry saved successfully!");
+      setMessage('Journal entry saved successfully!');
       setShowRewardAnimation(true);
       setTimeout(() => setShowRewardAnimation(false), 3000);
 
-      setFocusScore("");
-      setTopPriority("");
-      setSalesActivityCount("");
+      setFocusScore('');
+      setTopPriority('');
+      setSalesActivityCount('');
       setCoreHabitDone(false);
-      setWinOfTheDay("");
-      setLessonLearned("");
-      setCurrentDate(new Date().toISOString().split("T")[0]);
+      setWinOfTheDay('');
+      setLessonLearned('');
+      setCurrentDate(new Date().toISOString().split('T')[0]);
     } catch (error: any) {
-      console.error("Error saving journal entry:", error);
-      setMessage("Error saving entry. Please try again.");
+      console.error('Error saving journal entry:', error);
+      setMessage('Error saving entry. Please try again.');
     }
   };
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100 font-inter">
-        <div className="text-xl font-semibold text-gray-700">
-          Loading Absolute Achievers Journal...
-        </div>
+        <div className="text-xl font-semibold text-gray-700">Loading Absolute Achievers Journal...</div>
       </div>
     );
   }
@@ -336,19 +267,12 @@ function App() {
 
         {userId && (
           <p className="text-sm text-gray-600 mb-4 text-center select-all">
-            Your User ID:{" "}
-            <span className="font-mono text-blue-600 break-all">{userId}</span>
+            Your User ID: <span className="font-mono text-blue-600 break-all">{userId}</span>
           </p>
         )}
 
         {message && (
-          <div
-            className={`p-3 mb-4 rounded-lg text-center font-medium ${
-              message.includes("Error")
-                ? "bg-red-100 text-red-700"
-                : "bg-green-100 text-green-700"
-            }`}
-          >
+          <div className={`p-3 mb-4 rounded-lg text-center font-medium ${message.includes('Error') ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
             {message}
           </div>
         )}
@@ -357,12 +281,9 @@ function App() {
         {showHabitSetupModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-xl shadow-2xl p-6 sm:p-8 w-full max-w-md text-center border border-blue-300">
-              <h2 className="text-2xl font-bold text-blue-800 mb-4">
-                Define Your Core Habit
-              </h2>
+              <h2 className="text-2xl font-bold text-blue-800 mb-4">Define Your Core Habit</h2>
               <p className="text-gray-700 mb-4">
-                What is ONE single, consistent habit you commit to for the next
-                21 days to boost your performance?
+                What is ONE single, consistent habit you commit to for the next 21 days to boost your performance?
               </p>
               <input
                 type="text"
@@ -393,15 +314,14 @@ function App() {
             ></div>
           </div>
           <p className="text-sm text-gray-700 text-center">
-            You've completed **{Math.round(progressPercentage)}%** of your
-            Jumpstart! Keep going!
+            You've completed **{Math.round(progressPercentage)}%** of your Jumpstart! Keep going!
           </p>
           {daysCompleted >= totalChallengeDays && (
-            <p className="mt-2 text-md font-semibold text-green-700 text-center animate-pulse">
-              🎉 Congratulations! You've completed your 21-Day Jumpstart! 🎉
-              <br />
-              Ready for the next level?
-            </p>
+             <p className="mt-2 text-md font-semibold text-green-700 text-center animate-pulse">
+               🎉 Congratulations! You've completed your 21-Day Jumpstart! 🎉
+               <br />
+               Ready for the next level?
+             </p>
           )}
         </div>
 
@@ -412,34 +332,16 @@ function App() {
           </h2>
           {challengeCoreHabit ? (
             <p className="text-center text-sm font-medium text-gray-700 mb-4 p-2 bg-blue-200 rounded-lg">
-              Your Core Habit for 21 Days: **"{challengeCoreHabit}"**{" "}
-              <button
-                onClick={() => setShowHabitSetupModal(true)}
-                className="ml-2 text-blue-700 hover:text-blue-900 text-xs underline"
-              >
-                Change
-              </button>
+              Your Core Habit for 21 Days: **"{challengeCoreHabit}"** <button onClick={() => setShowHabitSetupModal(true)} className="ml-2 text-blue-700 hover:text-blue-900 text-xs underline">Change</button>
             </p>
           ) : (
-            <p
-              className="text-center text-sm text-red-600 font-medium mb-4 p-2 bg-red-100 rounded-lg cursor-pointer"
-              onClick={() => setShowHabitSetupModal(true)}
-            >
-              Please click here to **define your Core Habit** for the 21-Day
-              Jumpstart!
+            <p className="text-center text-sm text-red-600 font-medium mb-4 p-2 bg-red-100 rounded-lg cursor-pointer" onClick={() => setShowHabitSetupModal(true)}>
+              Please click here to **define your Core Habit** for the 21-Day Jumpstart!
             </p>
           )}
-          <form
-            onSubmit={handleSubmit}
-            className="grid grid-cols-1 md:grid-cols-2 gap-4"
-          >
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label
-                htmlFor="date"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Date
-              </label>
+              <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-1">Date</label>
               <input
                 type="date"
                 id="date"
@@ -450,12 +352,7 @@ function App() {
               />
             </div>
             <div>
-              <label
-                htmlFor="focus"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Focus Score (1-5)
-              </label>
+              <label htmlFor="focus" className="block text-sm font-medium text-gray-700 mb-1">Focus Score (1-5)</label>
               <input
                 type="number"
                 id="focus"
@@ -469,30 +366,19 @@ function App() {
               />
             </div>
             <div className="md:col-span-2">
-              <label
-                htmlFor="topPriority"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                What I WILL Accomplish Today
-              </label>{" "}
-              {/* New Label */}
+              <label htmlFor="topPriority" className="block text-sm font-medium text-gray-700 mb-1">What I WILL Accomplish Today</label> {/* New Label */}
               <textarea
                 id="topPriority"
                 value={topPriority}
                 onChange={(e) => setTopPriority(e.target.value)}
-                rows={2} // Changed to number
+                rows={2}
                 className="w-full p-2.5 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150"
                 placeholder="Finish proposal for client X, Plan tomorrow's calls."
                 required
               ></textarea>
             </div>
             <div>
-              <label
-                htmlFor="salesActivity"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Key Sales Activity Count
-              </label>
+              <label htmlFor="salesActivity" className="block text-sm font-medium text-gray-700 mb-1">Key Sales Activity Count</label>
               <input
                 type="number"
                 id="salesActivity"
@@ -512,43 +398,27 @@ function App() {
                 onChange={(e) => setCoreHabitDone(e.target.checked)}
                 className="h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
               />
-              <label
-                htmlFor="habitDone"
-                className="ml-3 block text-base font-medium text-gray-700 cursor-pointer"
-              >
-                Did I do my Core Habit?
-              </label>
+              <label htmlFor="habitDone" className="ml-3 block text-base font-medium text-gray-700 cursor-pointer">Did I do my Core Habit?</label>
             </div>
             <div className="md:col-span-2">
-              <label
-                htmlFor="win"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                What I DID Accomplish Today (My Win!)
-              </label>{" "}
-              {/* New Label */}
+              <label htmlFor="win" className="block text-sm font-medium text-gray-700 mb-1">What I DID Accomplish Today (My Win!)</label> {/* New Label */}
               <textarea
                 id="win"
                 value={winOfTheDay}
                 onChange={(e) => setWinOfTheDay(e.target.value)}
-                rows={2} // Changed to number
+                rows={2}
                 className="w-full p-2.5 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150"
                 placeholder="Successfully handled a tough objection; Closed a small deal!"
                 required
               ></textarea>
             </div>
             <div className="md:col-span-2">
-              <label
-                htmlFor="lesson"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Lesson Learned / Insight
-              </label>
+              <label htmlFor="lesson" className="block text-sm font-medium text-gray-700 mb-1">Lesson Learned / Insight</label>
               <textarea
                 id="lesson"
                 value={lessonLearned}
                 onChange={(e) => setLessonLearned(e.target.value)}
-                rows={2} // Changed to number
+                rows={2}
                 className="w-full p-2.5 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150"
                 placeholder="Focusing on just one priority dramatically improved my efficiency."
                 required
@@ -569,9 +439,11 @@ function App() {
         {/* Reward Animation */}
         {showRewardAnimation && (
           <div className="fixed inset-0 bg-blue-900 bg-opacity-75 flex items-center justify-center p-4 z-50 animate-fade-in">
-            <div className="text-white text-6xl animate-bounce">✨🚀✅</div>
+            <div className="text-white text-6xl animate-bounce">
+              ✨🚀✅
+            </div>
             <p className="absolute text-white text-2xl font-bold top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-fade-out-up">
-              Success!
+                Success!
             </p>
           </div>
         )}
@@ -582,63 +454,29 @@ function App() {
             <span className="mr-2 text-blue-600">📚</span> Your Recent Entries
           </h2>
           {entries.length === 0 ? (
-            <p className="text-gray-600 text-center italic">
-              Start by adding your first daily log above!
-            </p>
+            <p className="text-gray-600 text-center italic">Start by adding your first daily log above!</p>
           ) : (
             <div className="space-y-4">
               {entries.slice(0, totalChallengeDays).map((entry) => (
-                <div
-                  key={entry.id}
-                  className="bg-gradient-to-r from-gray-50 to-gray-100 p-4 rounded-xl shadow-md border border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center"
-                >
+                <div key={entry.id} className="bg-gradient-to-r from-gray-50 to-gray-100 p-4 rounded-xl shadow-md border border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center">
                   <div className="flex-1 mb-2 sm:mb-0">
-                    <p className="text-lg font-bold text-blue-700 mb-1">
-                      {entry.date}
-                    </p>
+                    <p className="text-lg font-bold text-blue-700 mb-1">{entry.date}</p>
                     <div className="flex items-center text-sm text-gray-700 mb-1">
-                      Focus:{" "}
-                      <span
-                        className={`ml-1 font-semibold ${
-                          entry.focusScore >= 4
-                            ? "text-green-600"
-                            : entry.focusScore >= 3
-                            ? "text-yellow-600"
-                            : "text-red-600"
-                        }`}
-                      >
-                        {entry.focusScore}/5
-                      </span>
+                      Focus: <span className={`ml-1 font-semibold ${entry.focusScore >= 4 ? 'text-green-600' : entry.focusScore >= 3 ? 'text-yellow-600' : 'text-red-600'}`}>{entry.focusScore}/5</span>
                     </div>
-                    <p className="text-sm text-gray-700 mb-1">
-                      Sales Activities:{" "}
-                      <span className="font-semibold text-purple-700">
-                        {entry.salesActivityCount}
-                      </span>
-                    </p>
+                    <p className="text-sm text-gray-700 mb-1">Sales Activities: <span className="font-semibold text-purple-700">{entry.salesActivityCount}</span></p>
                   </div>
                   <div className="flex-1 sm:text-right">
-                    <p className="text-base text-gray-800 font-medium mb-1">
-                      Will Accomplish: {entry.topPriority}
-                    </p>
-                    <p className="text-sm text-gray-700 mb-1">
-                      Did Accomplish: {entry.winOfTheDay}
-                    </p>
-                    <p className="text-sm text-gray-700">
-                      Lesson: {entry.lessonLearned}
-                    </p>
-                    <p className="text-sm font-semibold text-gray-900 mt-2">
-                      Core Habit Done:{" "}
-                      {entry.coreHabitDone ? "✅ Yes!" : "❌ Not today"}
-                    </p>
+                    <p className="text-base text-gray-800 font-medium mb-1">Will Accomplish: {entry.topPriority}</p>
+                    <p className="text-sm text-gray-700 mb-1">Did Accomplish: {entry.winOfTheDay}</p>
+                    <p className="text-sm text-gray-700">Lesson: {entry.lessonLearned}</p>
+                    <p className="text-sm font-semibold text-gray-900 mt-2">Core Habit Done: {entry.coreHabitDone ? '✅ Yes!' : '❌ Not today'}</p>
                   </div>
                 </div>
               ))}
               {entries.length > totalChallengeDays && (
                 <p className="text-center text-gray-500 text-sm italic mt-4">
-                  Showing your most recent {totalChallengeDays} entries. Unlock
-                  the full 90-day journal for complete history and advanced
-                  insights!
+                  Showing your most recent {totalChallengeDays} entries. Unlock the full 90-day journal for complete history and advanced insights!
                 </p>
               )}
             </div>
